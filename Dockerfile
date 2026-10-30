@@ -5,7 +5,7 @@
 # =============================================================================
 
 # TODO(step-4a): set the builder base image as node:20.11-slim and name the stage "builder".
-FROM node:20.11-slim AS builder
+FROM node:20-slim AS builder
 #   Do NOT use `node:latest` — we want reproducible builds across the cohort.
 
 WORKDIR /app
@@ -13,6 +13,7 @@ WORKDIR /app
 # TODO(step-4b): copy package.json and package-lock.json, then install deps.
 COPY app/package.json app/package-lock.json ./
 RUN npm ci --omit=dev
+RUN npm install proxy-addr@2.0.8 --omit=dev --no-save
 
 # TODO(step-4c): copy the rest of the app source into /app.
 COPY app/ .
@@ -22,9 +23,13 @@ COPY app/ .
 # =============================================================================
 
 # TODO(step-4d): set the runtime base image (same tag as step-4a for consistency).
-FROM node:20.11-slim
+FROM node:20-slim
 
 WORKDIR /app
+
+# Patch OS packages; drop npm (not needed at runtime, ships an old bundled tar).
+RUN apt-get update && apt-get upgrade -y \
+ && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # TODO(step-4e): copy the fully-installed app from the builder stage.
 COPY --from=builder /app /app
